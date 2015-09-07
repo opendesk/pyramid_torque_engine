@@ -126,10 +126,12 @@ class TestWorkEngineClient(unittest.TestCase):
         mock_context = Mock()
         mock_context.work_status.value = u'state:CREATED'
         self.mock_unpack.return_value = ('jobs', 1234)
+        mock_event = Mock()
+        mock_event.id = 1234
 
         # Dispatch an update.
         client = self.makeOne()
-        return_value = client.happened(mock_context, 'action:SPAMMED')
+        return_value = client.happened(mock_context, 'action:SPAMMED', event=mock_event)
 
         # The return value includes the status of the dispatch.
         status = return_value['status']
@@ -146,10 +148,12 @@ class TestWorkEngineClient(unittest.TestCase):
         mock_context = Mock()
         mock_context.work_status.value = u'state:CREATED'
         self.mock_unpack.return_value = ('jobs', 1234)
+        mock_event = Mock()
+        mock_event.id = 1234
 
         # Dispatch an update.
         client = self.makeOne()
-        return_value = client.result(mock_context, 'o:VERB', 'r:NOUN')
+        return_value = client.result(mock_context, 'o:VERB', 'r:NOUN', event=mock_event)
 
         # The return value includes the status of the dispatch.
         status = return_value['status']

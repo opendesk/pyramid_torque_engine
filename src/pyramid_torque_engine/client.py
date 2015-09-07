@@ -229,6 +229,8 @@ class WorkEngineClient(object):
         }
         if event:
             data['event_id'] = event.id
+        else:
+            raise ValueError('WorkEngineClient.changed: No event supplied.')
 
         logger.info((
             'torque.engine.changed',
@@ -251,6 +253,8 @@ class WorkEngineClient(object):
         }
         if event:
             data['event_id'] = event.id
+        else:
+            raise ValueError('WorkEngineClient.happened: No event supplied.')
 
         logger.info((
             'torque.engine.happened',
@@ -276,6 +280,8 @@ class WorkEngineClient(object):
             data['event_id'] = event.id
         elif event_id:
             data['event_id'] = event_id
+        else:
+            raise ValueError('WorkEngineClient.result: No event supplied.')
 
         logger.info((
             'torque.engine.result',

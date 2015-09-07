@@ -8,8 +8,11 @@ logger = logging.getLogger(__name__)
 import json
 import fysom
 
+from mock import Mock
+
 from pyramid import config as pyramid_config
 
+from pyramid_torque_engine import repo
 from pyramid_torque_engine import constants
 from pyramid_torque_engine import operations as ops
 from pyramid_torque_engine import unpack
@@ -100,9 +103,17 @@ class TestSubscriptions(boilerplate.AppTestCase):
         request = self.getRequest(app)
         context = model.factory()
 
+        # Create a dummy event.
+        mock_context = Mock()
+        mock_context.__json__ = Mock()
+        mock_context.__json__.return_value = {}
+        event_factory = repo.ActivityEventFactory(Mock())
+        data = {'event': 'event'}
+        event = event_factory(mock_context, None, data=data, type_='test:ing')
+
         # Perform a state change.
         state_changer = request.state_changer
-        _, _, dispatched = state_changer.perform(context, a.START, None)
+        _, _, dispatched = state_changer.perform(context, a.START, event)
 
         # The s.STARTED event should trigger GO_FORTH and BEEP.
         handlers = get_handlers_for(dispatched, s.STARTED, names_only=True)
@@ -118,9 +129,17 @@ class TestSubscriptions(boilerplate.AppTestCase):
         request = self.getRequest(app)
         context = model.factory(cls=model.Foo)
 
+        # Create a dummy event.
+        mock_context = Mock()
+        mock_context.__json__ = Mock()
+        mock_context.__json__.return_value = {}
+        event_factory = repo.ActivityEventFactory(Mock())
+        data = {'event': 'event'}
+        event = event_factory(mock_context, None, data=data, type_='test:ing')
+
         # Perform a state change.
         state_changer = request.state_changer
-        _, _, dispatched = state_changer.perform(context, a.START, None)
+        _, _, dispatched = state_changer.perform(context, a.START, event)
 
         # The s.STARTED event should trigger GO_FORTH *and* MULTIPLY.
         handlers = get_handlers_for(dispatched, s.STARTED, names_only=True)
@@ -137,9 +156,13 @@ class TestSubscriptions(boilerplate.AppTestCase):
         request = self.getRequest(app)
         context = model.factory()
 
+        # Mock the event out.
+        mock_event = Mock()
+        mock_event.id = 1234
+
         # Perform an action.
         state_changer = request.state_changer
-        _, _, dispatched = state_changer.perform(context, a.POKE, None)
+        _, _, dispatched = state_changer.perform(context, a.POKE, mock_event)
 
         # The poke should trigger a beep.
         handlers = get_handlers_for(dispatched, a.POKE, names_only=True)
@@ -154,9 +177,17 @@ class TestSubscriptions(boilerplate.AppTestCase):
         request = self.getRequest(app)
         context = model.factory(cls=model.Foo)
 
+        # Mock the event out.
+        mock_context = Mock()
+        mock_context.__json__ = Mock()
+        mock_context.__json__.return_value = {}
+        event_factory = repo.ActivityEventFactory(Mock())
+        data = {'event': 'event'}
+        event = event_factory(mock_context, None, data=data, type_='test:ing')
+
         # Perform an action.
         state_changer = request.state_changer
-        _, _, dispatched = state_changer.perform(context, a.POKE, None)
+        _, _, dispatched = state_changer.perform(context, a.POKE, event)
 
         # The action should trigger lots of beeps.
         handlers = get_handlers_for(dispatched, a.POKE, names_only=True)
@@ -231,9 +262,17 @@ class TestTransitions(boilerplate.AppTestCase):
         request = self.getRequest(app)
         context = model.factory(initial_state=s.STARTED)
 
+        # Mock the event out.
+        mock_context = Mock()
+        mock_context.__json__ = Mock()
+        mock_context.__json__.return_value = {}
+        event_factory = repo.ActivityEventFactory(Mock())
+        data = {'event': 'event'}
+        event = event_factory(mock_context, None, data=data, type_='test:ing')
+
         # Reporting back success ...
         notify = request.torque.engine
-        dispatch = notify.result(context, o.DOIT, r.SUCCESS)
+        dispatch = notify.result(context, o.DOIT, r.SUCCESS, event=event)
 
         # ... triggers a finish.
         events = triggered_events(dispatch, 'action')
@@ -248,9 +287,17 @@ class TestTransitions(boilerplate.AppTestCase):
         request = self.getRequest(app)
         context = model.factory(initial_state=s.STARTED)
 
+        # Mock the event out.
+        mock_context = Mock()
+        mock_context.__json__ = Mock()
+        mock_context.__json__.return_value = {}
+        event_factory = repo.ActivityEventFactory(Mock())
+        data = {'event': 'event'}
+        event = event_factory(mock_context, None, data=data, type_='test:ing')
+
         # Reporting back failure ...
         notify = request.torque.engine
-        dispatch = notify.result(context, o.DOIT, r.FAILURE)
+        dispatch = notify.result(context, o.DOIT, r.FAILURE, event=event)
 
         # ... triggers a fail.
         events = triggered_events(dispatch, 'action')
@@ -265,9 +312,17 @@ class TestTransitions(boilerplate.AppTestCase):
         request = self.getRequest(app)
         context = model.factory(cls=model.Foo, initial_state=s.STARTED)
 
+        # Mock the event out.
+        mock_context = Mock()
+        mock_context.__json__ = Mock()
+        mock_context.__json__.return_value = {}
+        event_factory = repo.ActivityEventFactory(Mock())
+        data = {'event': 'event'}
+        event = event_factory(mock_context, None, data=data, type_='test:ing')
+
         # Reporting back failure ...
         notify = request.torque.engine
-        dispatch = notify.result(context, o.DOIT, r.FAILURE)
+        dispatch = notify.result(context, o.DOIT, r.FAILURE, event=event)
 
         # ... will result in a dispute.
         events = triggered_events(dispatch, 'action')

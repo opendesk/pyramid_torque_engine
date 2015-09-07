@@ -6,14 +6,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 import fysom
+import transaction
 
 from pyramid import config as pyramid_config
 
+from pyramid_basemodel import Session
+
+from pyramid_torque_engine import repo
 from pyramid_torque_engine import unpack
 a, o, r, s = unpack.constants()
 
 from . import boilerplate
 from . import model
+
+from mock import Mock
 
 class TestAllowedActions(boilerplate.AppTestCase):
     """Test ``allow(context, action, (from_states), to_state)`` rules."""
@@ -105,22 +111,34 @@ class TestAllowedActions(boilerplate.AppTestCase):
         request = self.getRequest(app)
         context = model.factory()
 
-        # First of all it's OK to perform the action in any state.
-        state_changer = request.state_changer
-        state_changer.perform(context, a.POKE, None)
-        s1 = context.work_status.value
-        state_changer.perform(context, a.START, None)
-        state_changer.perform(context, a.POKE, None)
-        s2 = context.work_status.value
+        # Create a dummy event.
+        mock_context = Mock()
+        mock_context.__json__ = Mock()
+        mock_context.__json__.return_value = {}
+        event_factory = repo.ActivityEventFactory(Mock())
 
-        # And because it has a to state of Ellipsis, it stays in
-        # whatever state its in.
-        self.assertEqual(s1, s.CREATED)
-        self.assertEqual(s2, s.STARTED)
+        with transaction.manager:
+            data = {'event': 'event'}
+            event = event_factory(mock_context, None, data=data, type_='test:ing')
+            event2 = event_factory(mock_context, None, data=data, type_='test:ing')
+            event3 = event_factory(mock_context, None, data=data, type_='test:ing')
 
-        # Although an '*' from state can prescribe a to state too.
-        state_changer.perform(context, a.TRANSMOGRIFY, None)
-        self.assertEqual(context.work_status.value, s.TRANSMOGRIFIED)
+            # First of all it's OK to perform the action in any state.
+            state_changer = request.state_changer
+            state_changer.perform(context, a.POKE, event)
+            s1 = context.work_status.value
+            state_changer.perform(context, a.START, event2)
+            state_changer.perform(context, a.POKE, event3)
+            s2 = context.work_status.value
+
+            # And because it has a to state of Ellipsis, it stays in
+            # whatever state its in.
+            self.assertEqual(s1, s.CREATED)
+            self.assertEqual(s2, s.STARTED)
+
+            # Although an '*' from state can prescribe a to state too.
+            state_changer.perform(context, a.TRANSMOGRIFY, event)
+            self.assertEqual(context.work_status.value, s.TRANSMOGRIFIED)
 
     def test_multiple_rules(self):
         """A from state can have multiple to states."""
